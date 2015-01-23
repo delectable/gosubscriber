@@ -9,6 +9,19 @@ import (
 	"strings"
 )
 
+var (
+	appListKey     = "resquebus_apps"
+	appSingleKey   = "resquebus_app"
+	specialPrepend = "bus_special_value_"
+)
+
+type subscriptionValueStruct struct {
+	QueueName string            `json:"queue_name"`
+	Key       string            `json:"key"`
+	Class     string            `json:"class"`
+	Matcher   map[string]string `json:"matcher"`
+}
+
 type specialValues struct {
 	Key     string
 	Blank   string
@@ -18,18 +31,8 @@ type specialValues struct {
 	Value   string
 }
 
-type subscriptionValueStruct struct {
-	QueueName string            `json:"queueName"`
-	Key       string            `json:"key"`
-	Class     string            `json:"class"`
-	Matcher   map[string]string `json:"matcher"`
-}
-
 var (
-	appListKey     = "resquebus_apps"
-	appSingleKey   = "resquebus_app"
-	specialPrepend = "bus_special_value_"
-	SpecialValues  = specialValues{
+	SpecialValues = specialValues{
 		Key:     fmt.Sprintf("%s%s", specialPrepend, "key"),
 		Blank:   fmt.Sprintf("%s%s", specialPrepend, "blank"),
 		Nil:     fmt.Sprintf("%s%s", specialPrepend, "nil"),
