@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/delectable/goworker-bus"
+	"github.com/delectable/gosubscriber"
 )
 
 func testSubscriber(args map[string]interface{}) error {
@@ -12,7 +12,7 @@ func testSubscriber(args map[string]interface{}) error {
 
 func main() {
 	// Subscribing to testEventOne
-	goworker_bus.Subscribe("delectaroutes", "test", testSubscriber, map[string]string{
+	gosubscriber.Subscribe("delectaroutes", "test", testSubscriber, map[string]string{
 		"bus_event_type": "testEventOne",
 	})
 
@@ -21,8 +21,8 @@ func main() {
 
 	// Subscribing to testEventTwo, this time requiring the "required" argument
 	// to be present
-	goworker_bus.Subscribe("delectaroutes", "test", testSubscriber, map[string]string{
-		"required":       goworker_bus.SpecialValues.Present,
+	gosubscriber.Subscribe("delectaroutes", "test", testSubscriber, map[string]string{
+		"required":       gosubscriber.SpecialValues.Present,
 		"bus_event_type": "testEventTwo",
 	})
 
@@ -31,5 +31,5 @@ func main() {
 	// ResqueBus.publish(:testEventTwo, {blarg: 1})      // doesn't work
 
 	// Firing up the worker
-	goworker_bus.Work()
+	gosubscriber.Work()
 }

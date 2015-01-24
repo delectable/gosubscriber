@@ -1,0 +1,3 @@
+package gosubscriber
+
+import "testing"

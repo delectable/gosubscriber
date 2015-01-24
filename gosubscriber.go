@@ -1,4 +1,4 @@
-package goworker_bus
+package gosubscriber
 
 import (
 	"encoding/json"

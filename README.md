@@ -1,2 +1,2 @@
-goworker-bus
+gosubscriber
 ============
