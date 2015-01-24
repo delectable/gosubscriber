@@ -4,24 +4,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/benmanns/goworker"
+	"github.com/cihub/seelog"
+	"os"
 	"reflect"
 	"runtime"
 	"strings"
 )
 
+// Configurable variables
 var (
 	appListKey     = "resquebus_apps"
 	appSingleKey   = "resquebus_app"
 	specialPrepend = "bus_special_value_"
+	logger, _      = seelog.LoggerFromWriterWithMinLevel(os.Stdout, seelog.InfoLvl)
 )
 
-type subscriptionValueStruct struct {
-	QueueName string            `json:"queue_name"`
-	Key       string            `json:"key"`
-	Class     string            `json:"class"`
-	Matcher   map[string]string `json:"matcher"`
-}
-
+// Special Values are for Matcher criteria. For usage example, see example.go
+// For Ruby driver implementation, see:
+// https://github.com/taskrabbit/resque-bus/blob/master/lib/resque_bus/matcher.rb
 type specialValues struct {
 	Key     string
 	Blank   string
@@ -42,85 +42,131 @@ var (
 	}
 )
 
+// This is will be the serialized subscription value, stored in redis for the
+// Driver to parse
+type subscriptionValueStruct struct {
+	QueueName string            `json:"queue_name"`
+	Key       string            `json:"key"`
+	Class     string            `json:"class"`
+	Matcher   map[string]string `json:"matcher"`
+}
+
+// Takes a function, returns its path
 func getFunctionPath(i interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
 
+// Takes a function, returns its name (sans path)
 func getFunctionName(i interface{}) string {
 	slice := strings.Split(getFunctionPath(i), ".")
 	return slice[len(slice)-1]
 }
 
+// Builds the Hash key under which the serialized subscription value is stored
 func buildSubscriptionKey(functionPath, busEventType string) string {
 	slice := strings.Split(functionPath, ".")
 	pathPrefix := strings.Join(slice[:len(slice)-1], ".")
 	functionName := slice[len(slice)-1]
 
-	return fmt.Sprintf("%s.__resquebussubscriber__%s__%s", pathPrefix, functionName, busEventType)
+	return fmt.Sprintf(
+		"%s.__resquebussubscriber__%s__%s",
+		pathPrefix,
+		functionName,
+		busEventType,
+	)
 }
 
-// Subscribe registers a goworker worker function and
-// subscribes it to a given bus event type
-func Subscribe(application string, queueName string, callback subscriberFunc, matcher map[string]string) {
+// Turns a subscriberFunc into a goworker.workerFunc for registering in Goworker
+func wrapSubscriber(subscriber subscriberFunc, functionPath string) func(string, ...interface{}) error {
+	return func(queue string, args ...interface{}) error {
+		logger.Debugf(
+			"Bus Subscriber '%s' activated for queue '%s' and event '%s'",
+			functionPath,
+			queue,
+			args[0].(map[string]interface{})["bus_event_type"],
+		)
+		return subscriber(args[0].(map[string]interface{}))
+	}
+}
+
+// Performs all necessary functions to subscribe a function to a ResquBus event
+func Subscribe(application string, queueName string, subscriber subscriberFunc, matcher map[string]string) {
+	// Set a default bus_event_type
 	if matcher["bus_event_type"] == "" {
 		if matcher == nil {
 			matcher = make(map[string]string)
 		}
-		matcher["bus_event_type"] = getFunctionName(callback)
+		matcher["bus_event_type"] = getFunctionName(subscriber)
 	}
 
-	redisKey := fmt.Sprintf("%s%s:%s", goworker.Namespace(), appSingleKey, application)
-	subscriptionKey := buildSubscriptionKey(getFunctionPath(callback), matcher["bus_event_type"])
+	// Build the Redis Key to store this application's subscriptions
+	redisKey := fmt.Sprintf(
+		"%s%s:%s",
+		goworker.Namespace(),
+		appSingleKey,
+		application,
+	)
 
-	fmt.Println("SUBSCRIBING")
-	fmt.Println("  Application:", application)
-	fmt.Println("  Queue Name: ", queueName)
-	fmt.Println("  Matcher:    ", matcher)
-	fmt.Println("  Redis Key:  ", redisKey)
-	fmt.Println("  Subscription Key:  ", subscriptionKey)
+	functionPath := getFunctionPath(subscriber)
+	subscriptionKey := buildSubscriptionKey(functionPath, matcher["bus_event_type"])
 
+	logger.Info("Subscribing.")
+	logger.Info("  Application:      ", application)
+	logger.Info("  Function:         ", functionPath)
+	logger.Info("  Queue Name:       ", queueName)
+	logger.Info("  Matcher:          ", matcher)
+	logger.Info("  Redis Key:        ", redisKey)
+	logger.Info("  Subscription Key: ", subscriptionKey)
+
+	// Initialize goworker, so we can use its Redis connection
 	if err := goworker.Init(); err != nil {
-		fmt.Println("ERROR IN INIT:", err)
+		logger.Critical("ERROR IN INIT:", err)
 	}
-	defer goworker.Close()
-	conn, err := goworker.GetConn()
+	defer goworker.Close() // tear down goworker once we're done here
 
-	if err == nil {
-		subscriptionValue := subscriptionValueStruct{
-			QueueName: queueName,
-			Key:       subscriptionKey,
-			Class:     queueName,
-			Matcher:   matcher,
-		}
+	conn, err := goworker.GetConn() // pull a conn from goworker's connection pool
 
-		serializedSubscriptionValue, err := json.Marshal(subscriptionValue)
+	if err != nil {
+		logger.Critical("ERROR GETTING GOWORKER CONNECTION:", err)
+	}
 
-		if err != nil {
-			fmt.Println("ERROR IN SERIALIZATION:", err)
-		} else {
-			fmt.Println("serializedSubscriptionValue", string(serializedSubscriptionValue))
-		}
+	// subscriptionValue contains this subscription's configuration, stored as a
+	// serialized string in the 'redisKey' Redis hash under 'subscriptionKey'
+	subscriptionValue := subscriptionValueStruct{
+		QueueName: queueName,
+		Key:       subscriptionKey,
+		Class:     queueName,
+		Matcher:   matcher,
+	}
 
-		err = conn.Send("HSET", redisKey, subscriptionKey, serializedSubscriptionValue)
+	serializedSubscriptionValue, err := json.Marshal(subscriptionValue)
 
-		if err != nil {
-			fmt.Println("ERROR IN SEND:", err)
-		}
-		// ResqueBus.redis.sadd(self.class.appListKey, app_key)
-		err = conn.Send("SADD", fmt.Sprintf("%s%s", goworker.Namespace(), appListKey), application)
-
-		conn.Flush()
-		goworker.PutConn(conn)
-
-		goworker.Register(queueName, wrapSubscriber(callback))
+	if err != nil {
+		logger.Critical("ERROR SERIALIZING: ", err)
 	} else {
-		fmt.Println("ERROR IN GETCONN:", err)
+		logger.Debug("  Serialized Subscription Value: ", string(serializedSubscriptionValue))
 	}
+
+	// Store the subscription configuration (pipelined)
+	err = conn.Send("HSET", redisKey, subscriptionKey, serializedSubscriptionValue)
+
+	if err != nil {
+		logger.Critical("ERROR IN HSET:", err)
+	}
+
+	// Ensure that this application is registered, so the ResqueBus driver can
+	// find our subscriptions (pipelined)
+	err = conn.Send("SADD", fmt.Sprintf("%s%s", goworker.Namespace(), appListKey), application)
+
+	conn.Flush() // Finalize the pipeline
+
+	goworker.PutConn(conn) // return the Redis connection back to Goworker
+
+	// Register the subscriberFunc with goworker, wrapped as a goworker.workerFunc
+	goworker.Register(queueName, wrapSubscriber(subscriber, functionPath))
 }
 
-func wrapSubscriber(subscriber subscriberFunc) func(string, ...interface{}) error {
-	return func(queue string, args ...interface{}) error {
-		fmt.Printf("Bus Subscriber %s activated for queue %s\n", getFunctionName(subscriber), queue)
-		return subscriber(args)
-	}
+func Work() {
+	logger.Info("Working.")
+	goworker.Work()
 }

@@ -1,3 +1,3 @@
 package goworker_bus
 
-type subscriberFunc func(...interface{}) error
+type subscriberFunc func(map[string]interface{}) error
