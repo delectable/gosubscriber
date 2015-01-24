@@ -9,7 +9,7 @@ Gosubscriber subscribers can run alongside Ruby/Node.js ResqueBus workers and su
 To install gosubscriber, use
 
 ```sh
-go get github.com/benmanns/gosubscriber
+go get github.com/delectable/gosubscriber
 ```
 
 to install the package, and then from your worker
