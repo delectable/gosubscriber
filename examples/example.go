@@ -10,7 +10,7 @@ func testSubscriber(args map[string]interface{}) error {
 	return nil
 }
 
-func main() {
+func init() {
 	application, queue := "example_application", "example_queue"
 
 	// Cleaning out any stale subscriptions
@@ -34,7 +34,11 @@ func main() {
 	// Publishing to testEventTwo from Ruby and testing the required argument
 	// ResqueBus.publish(:testEventTwo, {required: 1})   // works
 	// ResqueBus.publish(:testEventTwo, {blarg: 1})      // doesn't work
+}
 
+func main() {
 	// Firing up the worker
-	gosubscriber.Work()
+	if err := gosubscriber.Work(); err != nil {
+		fmt.Println("Error:", err)
+	}
 }
