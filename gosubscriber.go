@@ -194,7 +194,7 @@ func Unsubscribe(application string) {
 	goworker.PutConn(conn) // return the Redis connection back to Goworker
 }
 
-func Work() {
+func Work() error {
 	logger.Info("Working.")
-	goworker.Work()
+	return goworker.Work()
 }
