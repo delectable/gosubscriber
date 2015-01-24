@@ -11,8 +11,13 @@ func testSubscriber(args map[string]interface{}) error {
 }
 
 func main() {
+	application, queue := "example_application", "example_queue"
+
+	// Cleaning out any stale subscriptions
+	gosubscriber.Unsubscribe(application)
+
 	// Subscribing to testEventOne
-	gosubscriber.Subscribe("delectaroutes", "test", testSubscriber, map[string]string{
+	gosubscriber.Subscribe(application, queue, testSubscriber, map[string]string{
 		"bus_event_type": "testEventOne",
 	})
 
@@ -21,7 +26,7 @@ func main() {
 
 	// Subscribing to testEventTwo, this time requiring the "required" argument
 	// to be present
-	gosubscriber.Subscribe("delectaroutes", "test", testSubscriber, map[string]string{
+	gosubscriber.Subscribe(application, queue, testSubscriber, map[string]string{
 		"required":       gosubscriber.SpecialValues.Present,
 		"bus_event_type": "testEventTwo",
 	})
