@@ -2,7 +2,7 @@ gosubscriber
 ============
 gosubscriber is a [Resque Bus](https://github.com/taskrabbit/resque-bus)-compatible, Go-based background subscriber build on top of Benjamin Manns' [goworker](https://github.com/benmanns/goworker). It allows you to publish Resque Bus events in Ruby (or any other language), and perform background tasks in Go.
 
-Gosubscriber subscribers can run alongside Ruby/Node.js ResqueBus workers and subscribe to the exact same events, so a single action can prompte any number of orchestrated actions across any number of servers.
+Gosubscriber subscribers can run alongside Ruby/Node.js ResqueBus workers and subscribe to the exact same events, so a single action can prompt any number of orchestrated reactions across any number of servers.
 
 ## Installation
 
