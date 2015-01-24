@@ -95,7 +95,7 @@ gosubscriber subscribers receive the arguments sent over ResqueBus as a single m
 ``` go
 // where doSomething expects (int64, string)
 func testSubscriber(args map[string]interface{}) error {
-  idNum, ok := args["integer"].(json.Number)
+  idNum, ok := args["id"].(json.Number)
   if !ok {
     return errorInvalidParam
   }
