@@ -89,6 +89,15 @@ func wrapSubscriber(subscriber subscriberFunc, functionPath string) func(string,
 	}
 }
 
+func buildRedisKey(application string) string {
+	return fmt.Sprintf(
+		"%s%s:%s",
+		goworker.Namespace(),
+		appSingleKey,
+		application,
+	)
+}
+
 // Performs all necessary functions to subscribe a function to a ResquBus event
 func Subscribe(application string, queueName string, subscriber subscriberFunc, matcher map[string]string) {
 	// Set a default bus_event_type
@@ -100,12 +109,7 @@ func Subscribe(application string, queueName string, subscriber subscriberFunc, 
 	}
 
 	// Build the Redis Key to store this application's subscriptions
-	redisKey := fmt.Sprintf(
-		"%s%s:%s",
-		goworker.Namespace(),
-		appSingleKey,
-		application,
-	)
+	redisKey := buildRedisKey(application)
 
 	functionPath := getFunctionPath(subscriber)
 	subscriptionKey := buildSubscriptionKey(functionPath, matcher["bus_event_type"])
@@ -164,6 +168,29 @@ func Subscribe(application string, queueName string, subscriber subscriberFunc, 
 
 	// Register the subscriberFunc with goworker, wrapped as a goworker.workerFunc
 	goworker.Register(queueName, wrapSubscriber(subscriber, functionPath))
+}
+
+func Unsubscribe(application string) {
+	// Initialize goworker, so we can use its Redis connection
+	if err := goworker.Init(); err != nil {
+		logger.Critical("ERROR IN INIT:", err)
+	}
+	defer goworker.Close()          // tear down goworker once we're done here
+	conn, err := goworker.GetConn() // pull a conn from goworker's connection pool
+
+	err = conn.Send("SREM", fmt.Sprintf("%s%s", goworker.Namespace(), appListKey), application)
+	if err != nil {
+		logger.Critical("ERROR IN SREM:", err)
+	}
+
+	err = conn.Send("DEL", buildRedisKey(application))
+	if err != nil {
+		logger.Critical("ERROR IN HSET:", err)
+	}
+
+	conn.Flush() // Finalize the pipeline
+
+	goworker.PutConn(conn) // return the Redis connection back to Goworker
 }
 
 func Work() {
