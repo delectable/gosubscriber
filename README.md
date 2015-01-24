@@ -113,7 +113,7 @@ func testSubscriber(args map[string]interface{}) error {
 }
 ```
 
-For testing, it's helpful to use IRB to publish events (note that a ResqueBus Driver must be running)
+For testing, it's helpful to use IRB to publish events (note that a [ResqueBus Driver](https://github.com/taskrabbit/resque-bus#commands) must be running to process the event)
 
 ``` ruby
 ResqueBus.publish(:testEventOne)
