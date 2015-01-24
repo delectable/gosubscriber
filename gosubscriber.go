@@ -170,6 +170,7 @@ func Subscribe(application string, queueName string, subscriber subscriberFunc, 
 	goworker.Register(queueName, wrapSubscriber(subscriber, functionPath))
 }
 
+// Removes an entire application from ResqueBus
 func Unsubscribe(application string) {
 	// Initialize goworker, so we can use its Redis connection
 	if err := goworker.Init(); err != nil {
