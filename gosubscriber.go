@@ -119,6 +119,7 @@ func Subscribe(application string, queueName string, subscriber subscriberFunc, 
 	logger.Info("  Function:         ", functionPath)
 	logger.Info("  Queue Name:       ", queueName)
 	logger.Info("  Matcher:          ", matcher)
+	logger.Info("  ClassName:        ", functionPath)
 	logger.Info("  Redis Key:        ", redisKey)
 	logger.Info("  Subscription Key: ", subscriptionKey)
 
@@ -139,7 +140,7 @@ func Subscribe(application string, queueName string, subscriber subscriberFunc, 
 	subscriptionValue := subscriptionValueStruct{
 		QueueName: queueName,
 		Key:       subscriptionKey,
-		Class:     queueName,
+		Class:     functionPath,
 		Matcher:   matcher,
 	}
 
@@ -167,7 +168,7 @@ func Subscribe(application string, queueName string, subscriber subscriberFunc, 
 	goworker.PutConn(conn) // return the Redis connection back to Goworker
 
 	// Register the subscriberFunc with goworker, wrapped as a goworker.workerFunc
-	goworker.Register(queueName, wrapSubscriber(subscriber, functionPath))
+	goworker.Register(functionPath, wrapSubscriber(subscriber, functionPath))
 }
 
 // Removes an entire application from ResqueBus
