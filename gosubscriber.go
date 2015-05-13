@@ -114,12 +114,14 @@ func Subscribe(application string, queueName string, subscriber subscriberFunc, 
 	functionPath := getFunctionPath(subscriber)
 	subscriptionKey := buildSubscriptionKey(functionPath, matcher["bus_event_type"])
 
+	className := fmt.Sprintf("%s-%s", functionPath, matcher["bus_event_type"])
+
 	logger.Info("Subscribing.")
 	logger.Info("  Application:      ", application)
 	logger.Info("  Function:         ", functionPath)
 	logger.Info("  Queue Name:       ", queueName)
 	logger.Info("  Matcher:          ", matcher)
-	logger.Info("  ClassName:        ", functionPath)
+	logger.Info("  ClassName:        ", className)
 	logger.Info("  Redis Key:        ", redisKey)
 	logger.Info("  Subscription Key: ", subscriptionKey)
 
@@ -140,7 +142,7 @@ func Subscribe(application string, queueName string, subscriber subscriberFunc, 
 	subscriptionValue := subscriptionValueStruct{
 		QueueName: queueName,
 		Key:       subscriptionKey,
-		Class:     functionPath,
+		Class:     className,
 		Matcher:   matcher,
 	}
 
@@ -168,7 +170,7 @@ func Subscribe(application string, queueName string, subscriber subscriberFunc, 
 	goworker.PutConn(conn) // return the Redis connection back to Goworker
 
 	// Register the subscriberFunc with goworker, wrapped as a goworker.workerFunc
-	goworker.Register(functionPath, wrapSubscriber(subscriber, functionPath))
+	goworker.Register(className, wrapSubscriber(subscriber, functionPath))
 }
 
 // Removes an entire application from ResqueBus
