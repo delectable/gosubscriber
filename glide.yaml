@@ -1,0 +1,15 @@
+package: .
+import:
+- package: github.com/cihub/seelog
+  version: ^2.6.0
+- package: github.com/garyburd/redigo
+  version: ^1.6.0
+  subpackages:
+  - redis
+- package: github.com/youtube/vitess
+  version: ^2.1.1
+  subpackages:
+  - go/pools
+- package: golang.org/x/net
+  subpackages:
+  - context

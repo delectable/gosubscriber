@@ -3,8 +3,8 @@ package gosubscriber
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/benmanns/goworker"
 	"github.com/cihub/seelog"
+	"github.com/delectable/gosubscriber_redux/goworker"
 	"os"
 	"reflect"
 	"runtime"
@@ -18,6 +18,8 @@ var (
 	specialPrepend = "bus_special_value_"
 	logger, _      = seelog.LoggerFromWriterWithMinLevel(os.Stdout, seelog.InfoLvl)
 )
+
+type subscriberFunc func(map[string]interface{}) error
 
 // Special Values are for Matcher criteria. For usage example, see example.go
 // For Ruby driver implementation, see:

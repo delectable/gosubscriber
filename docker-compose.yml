@@ -1,0 +1,15 @@
+version: '3'
+services:
+  test:
+    build: .
+    command:
+      - make
+      - test
+    links:
+      - redis
+    depends_on:
+      - redis
+    environment:
+      REDIS_URL: "redis://redis:6379"
+  redis:
+    image: redis

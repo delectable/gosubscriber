@@ -121,3 +121,9 @@ ResqueBus.publish(:testEventTwo, {required: 1})
 ```
 
 For information on [configuration/flags](https://github.com/benmanns/goworker#flags), [signal handling](https://github.com/benmanns/goworker#signal-handling-in-goworker), and [failure modes](https://github.com/benmanns/goworker#failure-modes), see the [goworker readme](https://github.com/benmanns/goworker)
+
+## Development
+
+Tests can be run by executing `docker-compose up --build`. This will bootstrap a Redis instance to test against.
+
+`docker build .` will compile the library.
