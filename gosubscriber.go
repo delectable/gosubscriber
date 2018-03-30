@@ -3,8 +3,8 @@ package gosubscriber
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/BarefootCoders/goworker"
 	"github.com/cihub/seelog"
-	"github.com/delectable/gosubscriber_redux/goworker"
 	"os"
 	"reflect"
 	"runtime"

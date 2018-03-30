@@ -13,3 +13,5 @@ import:
 - package: golang.org/x/net
   subpackages:
   - context
+- package: github.com/BarefootCoders/goworker
+  version: 3110db7
